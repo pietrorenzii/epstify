@@ -5,8 +5,6 @@
 Upload any PDF, image, or text. Download the officially classified version.
 Because some things are better left ████████.
 
-**[→ Try it live at epstify.com](https://epstify.com)**
-
 ---
 
 ## Features
@@ -23,7 +21,6 @@ Because some things are better left ████████.
 ---
 
 ## Stack
-
 ```
 HTML · CSS · Vanilla JS
 PDF.js · html2canvas · jsPDF
@@ -33,57 +30,25 @@ GitHub Pages — zero cost, zero backend, zero server
 ---
 
 ## Run locally
-
 ```bash
 git clone https://github.com/YOURUSERNAME/epstify
 cd epstify
 open index.html
 ```
 
-Or with a local server:
-```bash
-npx serve .
-```
-
----
-
-## Deploy on GitHub Pages
-
-1. Fork this repo
-2. **Settings → Pages → Source: main / root**
-3. Live at `https://YOURUSERNAME.github.io/epstify`
-
-### Custom domain (epstify.com)
-
-1. **Settings → Pages → Custom domain** → `epstify.com` → Save
-2. Add these DNS records on your registrar:
-
-```
-A     @    185.199.108.153
-A     @    185.199.109.153
-A     @    185.199.110.153
-A     @    185.199.111.153
-CNAME www  YOURUSERNAME.github.io
-```
-
-3. Wait 10-30 min → tick "Enforce HTTPS"
-
 ---
 
 ## Project structure
-
 ```
 epstify/
-├── index.html               ← entire app, single file
-├── README.md                ← this file
-├── LICENSE                  ← MIT
-├── COPY.md                  ← all copy, tweets, launch strategy
-├── CONTRIBUTING.md          ← how to contribute
-├── CNAME                    ← custom domain for GitHub Pages
-├── .gitignore               ← standard ignores
+├── index.html
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── .gitignore
 └── .github/
     └── workflows/
-        └── deploy.yml       ← auto-deploy to GitHub Pages
+        └── deploy.yml
 ```
 
 ---
@@ -106,4 +71,32 @@ Not affiliated with any government agency or individual.
 
 ---
 
-*Classified by order of ████████ | Declassified: Never | epstify.com*
+*Classified by order of ████████ | Declassified: Never*
+```
+
+---
+
+## FILE 2 — `LICENSE`
+```
+MIT License
+
+Copyright (c) 2026 PIETRORENZII
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
