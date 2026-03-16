@@ -5,7 +5,20 @@
 Upload any PDF, image, or text. Download the officially classified version.
 Because some things are better left ████████.
 
-**[→ Try it live](https://epstify.com)**
+**[→ Try it live at epstify.com](https://epstify.com)**
+
+---
+
+<table>
+  <tr>
+    <td><img src="assets/screenshot_01.png" alt="Epstify — Upload interface" width="100%"></td>
+    <td><img src="assets/screenshot_02.png" alt="Epstify — Before & After classified result" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Upload any document</sub></td>
+    <td align="center"><sub>Get the classified version</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -66,4 +79,4 @@ Not affiliated with any government agency or individual.
 
 ---
 
-*Classified by order of ████████ | Declassified: Never*
+*Classified by order of ████████ | Declassified: Never | epstify.com*
