@@ -5,7 +5,7 @@
 Upload any PDF, image, or text. Download the officially classified version.
 Because some things are better left ████████.
 
-**[→ Try it live at epstify.com](https://epstify.com)**
+**[→ Try it live](https://epstify.com)**
 
 ---
 
@@ -40,10 +40,7 @@ cd epstify
 open index.html
 ```
 
-Or with a local server:
-```bash
-npx serve .
-```
+---
 
 ## Roadmap
 
@@ -63,11 +60,10 @@ Not affiliated with any government agency or individual.
 
 ---
 
-*Classified by order of ████████ | Declassified: Never | epstify.com*
-
----
-
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=pietrorenzii/epstify&type=Date)](https://star-history.com/#pietrorenzii/epstify&Date)
 
+---
+
+*Classified by order of ████████ | Declassified: Never*
