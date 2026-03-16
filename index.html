@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPSTIFY — Turn Any Doc Into An Epstein File</title>
+<meta name="description" content="Upload any file. Get the officially classified Epstein File version. 100% free, zero backend, no data stored.">
+<meta property="og:title" content="EPSTIFY — Make Any Document Government-Approved">
+<meta property="og:description" content="Upload any file. Download your redacted Epstein-style classified document in seconds.">
+<meta property="og:image" content="https://epstify.lol/og.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet">
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  /* ─── RESET & VARIABLES ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0a0a0a;
+    --paper: #f0ead6;
+    --paper-dark: #e0d8bf;
+    --red: #c0140a;
+    --red-dark: #8b0d07;
+    --ink: #1a1a1a;
+    --stamp-green: #1a4a1a;
+    --redact: #0a0a0a;
+    --font-doc: 'Special Elite', serif;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-stamp: 'Bebas Neue', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* ─── SCANLINE OVERLAY ──────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ─── NOISE TEXTURE ─────────────────────────────────── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.4;
+  }
+
+  /* ─── HEADER ────────────────────────────────────────── */
+  header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    position: relative;
+  }
+
+  .classification-banner {
+    background: var(--red);
+    color: white;
+    font-family: var(--font-stamp);
+    font-size: 13px;
+    letter-spacing: 8px;
+    padding: 6px 20px;
+    display: inline-block;
+    margin-bottom: 30px;
+    animation: blink-banner 3s step-end infinite;
+  }
+
+  @keyframes blink-banner {
+    0%, 90%, 100% { opacity: 1; }
+    92%, 98% { opacity: 0.3; }
+  }
+
+  .logo {
+    font-family: var(--font-stamp);
+    font-size: clamp(64px, 12vw, 140px);
+    letter-spacing: 12px;
+    line-height: 1;
+    color: var(--paper);
+    position: relative;
+    display: inline-block;
+  }
+
+  .logo .redact-logo {
+    position: relative;
+  }
+
+  .logo .redact-logo::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -5%;
+    width: 110%;
+    height: 40%;
+    background: var(--redact);
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+
+  .logo-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: rgba(240, 234, 214, 0.5);
+    margin-top: 12px;
+    text-transform: uppercase;
+  }
+
+  .file-number {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: rgba(240,234,214,0.3);
+    margin-top: 8px;
+    letter-spacing: 2px;
+  }
+
+  /* ─── COUNTER ───────────────────────────────────────── */
+  .counter-bar {
+    background: rgba(240,234,214,0.04);
+    border-top: 1px solid rgba(240,234,214,0.08);
+    border-bottom: 1px solid rgba(240,234,214,0.08);
+    padding: 12px 20px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(240,234,214,0.4);
+  }
+
+  .counter-bar span {
+    color: var(--red);
+    font-size: 13px;
+    font-weight: bold;
+  }
+
+  /* ─── MAIN CONTENT ──────────────────────────────────── */
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* ─── UPLOAD ZONE ───────────────────────────────────── */
+  .upload-section {
+    margin-bottom: 40px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: rgba(240,234,214,0.4);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .section-label::before {
+    content: '▶ ';
+    color: var(--red);
+  }
+
+  .drop-zone {
+    border: 1px solid rgba(240,234,214,0.15);
+    background: rgba(240,234,214,0.02);
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+    outline: none;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: rgba(240,234,214,0.4);
+    background: rgba(240,234,214,0.05);
+  }
+
+  .drop-zone.dragover::after {
+    content: 'DROP TO CLASSIFY';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(192,20,10,0.15);
+    font-family: var(--font-stamp);
+    font-size: 32px;
+    letter-spacing: 8px;
+    color: var(--red);
+    border: 2px dashed var(--red);
+  }
+
+  .drop-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    display: block;
+    opacity: 0.6;
+  }
+
+  .drop-title {
+    font-family: var(--font-stamp);
+    font-size: 24px;
+    letter-spacing: 4px;
+    color: var(--paper);
+    margin-bottom: 10px;
+  }
+
+  .drop-sub {
+    font-size: 11px;
+    color: rgba(240,234,214,0.4);
+    letter-spacing: 2px;
+  }
+
+  .drop-formats {
+    margin-top: 16px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(240,234,214,0.25);
+  }
+
+  #fileInput { display: none; }
+
+  /* ─── TEXT INPUT ────────────────────────────────────── */
+  .divider {
+    text-align: center;
+    margin: 24px 0;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: rgba(240,234,214,0.2);
+    position: relative;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: rgba(240,234,214,0.1);
+  }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+
+  textarea {
+    width: 100%;
+    background: rgba(240,234,214,0.03);
+    border: 1px solid rgba(240,234,214,0.15);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 20px;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    letter-spacing: 1px;
+    line-height: 1.7;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus {
+    border-color: rgba(240,234,214,0.3);
+  }
+
+  textarea::placeholder {
+    color: rgba(240,234,214,0.2);
+  }
+
+  /* ─── CONTROLS ──────────────────────────────────────── */
+  .controls {
+    margin: 40px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .controls { grid-template-columns: 1fr; }
+  }
+
+  .control-group {
+    background: rgba(240,234,214,0.03);
+    border: 1px solid rgba(240,234,214,0.1);
+    padding: 20px;
+  }
+
+  .control-group label {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: rgba(240,234,214,0.5);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 14px;
+  }
+
+  .level-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .level-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .level-option:hover {
+    border-color: rgba(240,234,214,0.15);
+    background: rgba(240,234,214,0.03);
+  }
+
+  .level-option input[type="radio"] { display: none; }
+
+  .level-option.selected {
+    border-color: var(--red);
+    background: rgba(192,20,10,0.08);
+  }
+
+  .level-dot {
+    width: 8px;
+    height: 8px;
+    border: 1px solid rgba(240,234,214,0.4);
+    display: flex-shrink: 0;
+  }
+
+  .level-option.selected .level-dot {
+    background: var(--red);
+    border-color: var(--red);
+  }
+
+  .level-name {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--paper);
+  }
+
+  .level-desc {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgba(240,234,214,0.35);
+    margin-left: auto;
+  }
+
+  .stamp-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stamp-opt {
+    cursor: pointer;
+    padding: 8px;
+    border: 1px solid rgba(240,234,214,0.1);
+    text-align: center;
+    font-family: var(--font-stamp);
+    font-size: 11px;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    color: rgba(240,234,214,0.5);
+  }
+
+  .stamp-opt.selected {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(192,20,10,0.08);
+  }
+
+  .stamp-opt:hover {
+    border-color: rgba(240,234,214,0.3);
+    color: var(--paper);
+  }
+
+  /* ─── GENERATE BUTTON ───────────────────────────────── */
+  .generate-btn {
+    width: 100%;
+    background: var(--red);
+    color: white;
+    border: none;
+    font-family: var(--font-stamp);
+    font-size: 22px;
+    letter-spacing: 8px;
+    padding: 22px 40px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+
+  .generate-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+    transform: translateX(-100%);
+    transition: transform 0s;
+  }
+
+  .generate-btn:hover::before {
+    transform: translateX(100%);
+    transition: transform 0.5s;
+  }
+
+  .generate-btn:hover {
+    background: var(--red-dark);
+    letter-spacing: 10px;
+  }
+
+  .generate-btn:active { transform: scale(0.99); }
+
+  .generate-btn:disabled {
+    background: rgba(240,234,214,0.1);
+    color: rgba(240,234,214,0.3);
+    cursor: not-allowed;
+    letter-spacing: 8px;
+  }
+
+  /* ─── RESULT SECTION ────────────────────────────────── */
+  #resultSection {
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .before-after {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 600px) {
+    .before-after { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: rgba(240,234,214,0.03);
+    border: 1px solid rgba(240,234,214,0.1);
+  }
+
+  .panel-label {
+    font-size: 9px;
+    letter-spacing: 5px;
+    color: rgba(240,234,214,0.35);
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(240,234,214,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-label .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2a2;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  .panel-content {
+    padding: 16px;
+    min-height: 200px;
+    max-height: 500px;
+    overflow-y: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .panel-content img, .panel-content canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Preview text */
+  .text-preview {
+    font-family: var(--font-doc);
+    font-size: 12px;
+    line-height: 2;
+    color: var(--ink);
+    background: var(--paper);
+    padding: 20px;
+    width: 100%;
+    min-height: 200px;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  /* Redacted text preview */
+  .redacted-preview {
+    font-family: var(--font-doc);
+    font-size: 12px;
+    line-height: 2;
+    background: var(--paper);
+    padding: 20px;
+    width: 100%;
+    min-height: 200px;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+
+  .redact-bar {
+    display: inline-block;
+    background: var(--redact);
+    height: 14px;
+    vertical-align: middle;
+    margin: 0 1px;
+  }
+
+  .redacted-preview .stamp-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-25deg);
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  /* ─── STAMP STYLES ──────────────────────────────────── */
+  .stamp-classified {
+    font-family: var(--font-stamp);
+    font-size: 42px;
+    letter-spacing: 6px;
+    color: var(--red);
+    border: 5px solid var(--red);
+    padding: 8px 16px;
+    display: inline-block;
+    line-height: 1;
+  }
+
+  .stamp-top-secret {
+    font-family: var(--font-stamp);
+    font-size: 36px;
+    letter-spacing: 4px;
+    color: var(--red);
+    border: 5px double var(--red);
+    padding: 10px 20px;
+    display: inline-block;
+    line-height: 1;
+  }
+
+  .stamp-eyes-only {
+    font-family: var(--font-stamp);
+    font-size: 32px;
+    letter-spacing: 3px;
+    color: var(--stamp-green);
+    border: 5px solid var(--stamp-green);
+    padding: 8px 14px;
+    display: inline-block;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .stamp-fbi {
+    font-family: var(--font-stamp);
+    font-size: 40px;
+    letter-spacing: 6px;
+    color: #000080;
+    border: 5px solid #000080;
+    padding: 8px 16px;
+    display: inline-block;
+    line-height: 1;
+  }
+
+  /* ─── DOCUMENT WRAPPER (exported) ──────────────────── */
+  #docWrapper {
+    background: var(--paper);
+    padding: 40px;
+    position: relative;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.8);
+    font-family: var(--font-doc);
+    color: var(--ink);
+    min-height: 400px;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .doc-header {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .doc-header-left {
+    font-size: 10px;
+    line-height: 1.6;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .doc-classification-top {
+    font-family: var(--font-stamp);
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: var(--red);
+    border: 2px solid var(--red);
+    padding: 2px 8px;
+    display: inline-block;
+  }
+
+  .doc-body {
+    font-size: 13px;
+    line-height: 2.2;
+    letter-spacing: 0.5px;
+  }
+
+  .doc-footer {
+    margin-top: 30px;
+    border-top: 1px solid var(--ink);
+    padding-top: 10px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(26,26,26,0.5);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .doc-watermark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .doc-watermark-text {
+    font-family: var(--font-stamp);
+    font-size: 100px;
+    letter-spacing: 10px;
+    color: rgba(192,20,10,0.06);
+    transform: rotate(-30deg);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .center-stamp {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-20deg);
+    opacity: 0.25;
+    z-index: 10;
+  }
+
+  /* ─── ACTION BUTTONS ────────────────────────────────── */
+  .action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  @media (max-width: 500px) {
+    .action-buttons { grid-template-columns: 1fr; }
+  }
+
+  .btn {
+    padding: 16px 24px;
+    font-family: var(--font-stamp);
+    font-size: 16px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+  }
+
+  .btn-download {
+    background: var(--paper);
+    color: var(--black);
+  }
+
+  .btn-download:hover {
+    background: white;
+    letter-spacing: 5px;
+  }
+
+  .btn-share {
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid var(--paper);
+  }
+
+  .btn-share:hover {
+    background: rgba(240,234,214,0.1);
+    letter-spacing: 5px;
+  }
+
+  .btn-new {
+    grid-column: 1 / -1;
+    background: transparent;
+    color: rgba(240,234,214,0.4);
+    border: 1px solid rgba(240,234,214,0.15);
+    font-size: 12px;
+    letter-spacing: 5px;
+    padding: 12px;
+  }
+
+  .btn-new:hover {
+    color: var(--paper);
+    border-color: rgba(240,234,214,0.4);
+  }
+
+  /* ─── EASTER EGG ZONE ───────────────────────────────── */
+  .easter-egg-msg {
+    display: none;
+    background: rgba(192,20,10,0.1);
+    border: 1px solid var(--red);
+    padding: 16px 20px;
+    margin-top: 16px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    line-height: 1.6;
+    color: var(--red);
+    animation: fadeUp 0.3s ease;
+  }
+
+  /* ─── FOOTER ────────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(240,234,214,0.2);
+    border-top: 1px solid rgba(240,234,214,0.06);
+  }
+
+  footer a {
+    color: rgba(240,234,214,0.35);
+    text-decoration: none;
+  }
+
+  footer a:hover { color: var(--paper); }
+
+  .footer-classification {
+    font-family: var(--font-stamp);
+    font-size: 14px;
+    letter-spacing: 6px;
+    color: rgba(192,20,10,0.4);
+    margin-bottom: 12px;
+  }
+
+  /* ─── LOADING ───────────────────────────────────────── */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,10,0.9);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .loading-overlay.active { display: flex; }
+
+  .loading-text {
+    font-family: var(--font-stamp);
+    font-size: 28px;
+    letter-spacing: 8px;
+    color: var(--red);
+    animation: blink-banner 1s step-end infinite;
+  }
+
+  .loading-bar {
+    width: 300px;
+    height: 2px;
+    background: rgba(240,234,214,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .loading-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: var(--red);
+    animation: loading-sweep 1.2s linear infinite;
+  }
+
+  @keyframes loading-sweep {
+    to { left: 100%; }
+  }
+
+  .loading-sub {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: rgba(240,234,214,0.3);
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-text">CLASSIFYING...</div>
+  <div class="loading-bar"></div>
+  <div class="loading-sub">EPSTEIN BUREAU OF DOCUMENT MANAGEMENT — PROCESSING</div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="classification-banner">TOP SECRET // NOFORN // ORCON</div>
+  <div class="logo">
+    <span>EP</span><span class="redact-logo">STI</span><span>FY</span>
+  </div>
+  <div class="logo-sub">Turn any doc into an Epstein File</div>
+  <div class="file-number">DOC-REF: ████-████-████ | HANDLE VIA SPECAT CHANNELS ONLY</div>
+</header>
+
+<!-- Counter -->
+<div class="counter-bar">
+  <span id="docCounter">0</span> documents epstified today
+  &nbsp;|&nbsp;
+  <a href="https://github.com/YOURUSERNAME/epstify" target="_blank" style="color:rgba(240,234,214,0.5);text-decoration:none;">
+    ☆ Star on GitHub
+  </a>
+  &nbsp;|&nbsp; Your secrets are safe with ████████
+</div>
+
+<main>
+
+  <!-- Upload Section -->
+  <div class="upload-section">
+    <p class="section-label">Step 1 — Select Evidence</p>
+
+    <div class="drop-zone" id="dropZone" tabindex="0">
+      <span class="drop-icon">📁</span>
+      <div class="drop-title">DROP FILE TO CLASSIFY</div>
+      <div class="drop-sub">click to browse or drag & drop</div>
+      <div class="drop-formats">PDF · PNG · JPG · GIF · WEBP · TXT</div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt">
+
+    <div class="divider">— OR PASTE TEXT —</div>
+
+    <textarea id="textInput" placeholder="Paste any text here and watch it become classified evidence...&#10;&#10;E.g.: 'At 9pm Jeffrey Epstein met with [REDACTED] at [REDACTED]...'"></textarea>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="control-group">
+      <label>▶ Redaction Level</label>
+      <div class="level-options">
+        <div class="level-option" data-level="mild">
+          <div class="level-dot"></div>
+          <span class="level-name">MILD</span>
+          <span class="level-desc">Intern forgot</span>
+        </div>
+        <div class="level-option selected" data-level="standard">
+          <div class="level-dot"></div>
+          <span class="level-name">STANDARD</span>
+          <span class="level-desc">FBI approved</span>
+        </div>
+        <div class="level-option" data-level="maximum">
+          <div class="level-dot"></div>
+          <span class="level-name">MAXIMUM</span>
+          <span class="level-desc">You know too much</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>▶ Stamp Type</label>
+      <div class="stamp-options">
+        <div class="stamp-opt selected" data-stamp="classified">CLASSIFIED</div>
+        <div class="stamp-opt" data-stamp="topsecret">TOP SECRET</div>
+        <div class="stamp-opt" data-stamp="eyesonly">EYES ONLY</div>
+        <div class="stamp-opt" data-stamp="fbi">FBI</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate Button -->
+  <button class="generate-btn" id="generateBtn" disabled>
+    ████ EPSTIFY THIS DOCUMENT ████
+  </button>
+
+  <!-- Easter egg message -->
+  <div class="easter-egg-msg" id="easterEgg"></div>
+
+  <!-- Result Section -->
+  <div id="resultSection">
+    <p class="section-label" style="margin-bottom:20px;">Step 3 — Your Classified Document</p>
+
+    <div class="before-after">
+      <div class="panel">
+        <div class="panel-label">
+          <span>ORIGINAL // UNCLASSIFIED</span>
+          <div class="status-dot" style="background:#888;"></div>
+        </div>
+        <div class="panel-content" id="beforePanel"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">
+          <span>CLASSIFIED // [REDACTED]</span>
+          <div class="status-dot"></div>
+        </div>
+        <div class="panel-content" id="afterPanel"></div>
+      </div>
+    </div>
+
+    <!-- Exportable document (hidden, used for download) -->
+    <div id="docWrapper" style="display:none;">
+      <div class="doc-watermark">
+        <div class="doc-watermark-text" id="watermarkText">CLASSIFIED</div>
+      </div>
+      <div class="doc-header">
+        <div class="doc-header-left">
+          <div>UNITED STATES DEPARTMENT OF ████████</div>
+          <div>BUREAU OF ████████ AFFAIRS</div>
+          <div>DOCUMENT REF: ████-████-████</div>
+          <div id="docDate"></div>
+        </div>
+        <div class="doc-classification-top" id="docStampLabel">CLASSIFIED</div>
+      </div>
+      <div class="doc-body" id="docBody"></div>
+      <div class="center-stamp" id="centerStamp">
+        <div class="stamp-classified">CLASSIFIED</div>
+      </div>
+      <div class="doc-footer">
+        <span>HANDLE VIA SPECAT CHANNELS ONLY</span>
+        <span>DECLASSIFIED: NEVER</span>
+        <span>made with epstify.lol</span>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn btn-download" id="downloadBtn">⬇ DOWNLOAD</button>
+      <button class="btn btn-share" id="shareBtn">𝕏 SHARE ON X</button>
+      <button class="btn btn-new" id="newDocBtn">▶ CLASSIFY ANOTHER DOCUMENT</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-classification">— EPSTIFY —</div>
+  <div>100% client-side · zero data stored · your files never leave your browser</div>
+  <div style="margin-top:8px;">
+    <a href="https://github.com/YOURUSERNAME/epstify" target="_blank">★ Star on GitHub</a>
+    &nbsp;·&nbsp;
+    <span>Classified by order of ████████</span>
+    &nbsp;·&nbsp;
+    <span>Report #████ filed ████████</span>
+  </div>
+</footer>
+
+<script>
+// ─── PDF.js SETUP ─────────────────────────────────────
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ─── STATE ────────────────────────────────────────────
+const state = {
+  level: 'standard',
+  stamp: 'classified',
+  fileType: null,
+  fileData: null,
+  fileName: '',
+  textContent: '',
+  rendered: false
+};
+
+// ─── COUNTER (fake but convincing) ───────────────────
+function initCounter() {
+  // Simula un contatore crescente basato sul timestamp
+  const base = 124831;
+  const perDay = 2847;
+  const daysSinceLaunch = 14;
+  const todayBase = Math.floor((Date.now() % 86400000) / 86400000 * perDay);
+  let count = base + (daysSinceLaunch * perDay) + todayBase;
+  document.getElementById('docCounter').textContent = count.toLocaleString();
+
+  // Incrementa ogni tanto
+  setInterval(() => {
+    count += Math.floor(Math.random() * 3);
+    document.getElementById('docCounter').textContent = count.toLocaleString();
+  }, 8000 + Math.random() * 12000);
+}
+initCounter();
+
+// ─── LEVEL SELECTION ──────────────────────────────────
+document.querySelectorAll('.level-option').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.level-option').forEach(x => x.classList.remove('selected'));
+    el.classList.add('selected');
+    state.level = el.dataset.level;
+  });
+});
+
+// ─── STAMP SELECTION ──────────────────────────────────
+document.querySelectorAll('.stamp-opt').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.stamp-opt').forEach(x => x.classList.remove('selected'));
+    el.classList.add('selected');
+    state.stamp = el.dataset.stamp;
+  });
+});
+
+// ─── FILE DROP ZONE ───────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const textInput = document.getElementById('textInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+textInput.addEventListener('input', () => {
+  if (textInput.value.trim()) {
+    state.fileType = 'text';
+    state.textContent = textInput.value;
+    state.fileName = 'document.txt';
+    enableGenerate();
+    checkEasterEgg('document.txt');
+  } else if (!state.fileData) {
+    disableGenerate();
+  }
+});
+
+function handleFile(file) {
+  const name = file.name.toLowerCase();
+  state.fileName = file.name;
+
+  checkEasterEgg(name);
+
+  if (name.endsWith('.pdf')) {
+    state.fileType = 'pdf';
+    const reader = new FileReader();
+    reader.onload = e => { state.fileData = e.target.result; enableGenerate(); };
+    reader.readAsArrayBuffer(file);
+  } else if (name.match(/\.(png|jpg|jpeg|gif|webp)$/)) {
+    state.fileType = 'image';
+    const reader = new FileReader();
+    reader.onload = e => { state.fileData = e.target.result; enableGenerate(); };
+    reader.readAsDataURL(file);
+  } else if (name.endsWith('.txt')) {
+    state.fileType = 'text';
+    const reader = new FileReader();
+    reader.onload = e => {
+      state.textContent = e.target.result;
+      textInput.value = e.target.result;
+      enableGenerate();
+    };
+    reader.readAsText(file);
+  } else {
+    alert('Format not supported. Try PDF, image, or TXT.');
+    return;
+  }
+
+  dropZone.querySelector('.drop-title').textContent = `LOADED: ${file.name.toUpperCase()}`;
+  dropZone.querySelector('.drop-sub').textContent = `${(file.size/1024).toFixed(1)}KB ready for classification`;
+}
+
+// ─── EASTER EGGS ──────────────────────────────────────
+const easterEggs = {
+  'resume': '⚠️ ALERT: This resume has been flagged by the Bureau. Candidate knows too much. Forwarded to [████████] for review. Hiring probability: [REDACTED].',
+  'cv': '⚠️ ALERT: CV intercepted by counterintelligence. Subject has suspiciously impressive qualifications. Cross-reference with [████] database initiated.',
+  'dating': '⚠️ SENSITIVE: Dating profile flagged for excessive optimism and unverified claims. Forwarded to the Department of ████████ Affairs.',
+  'bank': '⚠️ FINANCIAL INTEL: Document contains classified numerical sequences. Wire transfer origins: [████]. Destination: [████]. Amount: ████████.',
+  'therapy': '⚠️ PSYCH EVAL INTERCEPTED: Subject is aware of [████████]. Monitoring level upgraded to OMEGA.',
+  'password': '⚠️ CRITICAL BREACH: Password document acquired. Forwarding to ████████. Have a nice day.',
+  'secret': '⚠️ SECRET WITHIN A SECRET DETECTED. We\'re going to need a bigger stamp.',
+  'epstein': '⚠️ CLIENT LIST DETECTED. Document being forwarded to [████████], [████████], and [████████]. Discretion advised.',
+};
+
+function checkEasterEgg(name) {
+  const lower = name.toLowerCase();
+  const egg = document.getElementById('easterEgg');
+  egg.style.display = 'none';
+  for (const [key, msg] of Object.entries(easterEggs)) {
+    if (lower.includes(key)) {
+      egg.textContent = msg;
+      egg.style.display = 'block';
+      break;
+    }
+  }
+}
+
+// ─── GENERATE ─────────────────────────────────────────
+function enableGenerate() {
+  document.getElementById('generateBtn').disabled = false;
+}
+function disableGenerate() {
+  document.getElementById('generateBtn').disabled = true;
+}
+
+document.getElementById('generateBtn').addEventListener('click', generateDocument);
+
+async function generateDocument() {
+  showLoading(true);
+  await sleep(600 + Math.random() * 800); // dramatic pause
+
+  try {
+    if (state.fileType === 'text') {
+      renderTextDocument(state.textContent || textInput.value);
+    } else if (state.fileType === 'image') {
+      await renderImageDocument(state.fileData);
+    } else if (state.fileType === 'pdf') {
+      await renderPDFDocument(state.fileData);
+    }
+  } catch(e) {
+    console.error(e);
+    alert('Error processing document. Try a different file.');
+  }
+
+  showLoading(false);
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  state.rendered = true;
+}
+
+// ─── TEXT DOCUMENT ────────────────────────────────────
+function renderTextDocument(text) {
+  const before = document.getElementById('beforePanel');
+  const after = document.getElementById('afterPanel');
+
+  const lines = text.split('\n').filter(l => l.trim());
+
+  // Before panel
+  before.innerHTML = `<div class="text-preview">${lines.map(l => `<div>${escapeHtml(l)}</div>`).join('')}</div>`;
+
+  // After panel
+  const redactedLines = lines.map(line => redactLine(line, state.level));
+  const afterHtml = `<div class="redacted-preview">
+    ${redactedLines.join('<br>')}
+    <div class="stamp-overlay">${getStampHTML(state.stamp, 0.18)}</div>
+  </div>`;
+  after.innerHTML = afterHtml;
+
+  // Populate export doc
+  buildExportDoc(lines, redactedLines);
+}
+
+function redactLine(line, level) {
+  const probs = { mild: 0.25, standard: 0.55, maximum: 0.85 };
+  const p = probs[level];
+  const words = line.split(' ');
+  const result = words.map(word => {
+    if (!word.trim()) return word;
+    if (Math.random() < p) {
+      const w = Math.max(40, Math.min(word.length * 9, 120));
+      return `<span class="redact-bar" style="width:${w}px;"></span>`;
+    }
+    return `<span style="color:#1a1a1a;">${escapeHtml(word)}</span>`;
+  });
+  return result.join(' ');
+}
+
+// ─── IMAGE DOCUMENT ───────────────────────────────────
+async function renderImageDocument(dataURL) {
+  const before = document.getElementById('beforePanel');
+  const after = document.getElementById('afterPanel');
+
+  // Before
+  before.innerHTML = `<img src="${dataURL}" style="max-width:100%;max-height:460px;object-fit:contain;">`;
+
+  // Redact on canvas
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+
+  await new Promise(res => {
+    img.onload = res;
+    img.src = dataURL;
+  });
+
+  canvas.width = img.width;
+  canvas.height = img.height;
+  ctx.drawImage(img, 0, 0);
+
+  redactCanvas(ctx, canvas.width, canvas.height, state.level);
+  addStampToCanvas(ctx, canvas.width, canvas.height, state.stamp);
+
+  after.innerHTML = '';
+  after.appendChild(canvas);
+  canvas.style.maxWidth = '100%';
+  canvas.style.maxHeight = '460px';
+  canvas.style.objectFit = 'contain';
+
+  state.exportCanvas = canvas;
+}
+
+// ─── PDF DOCUMENT ─────────────────────────────────────
+async function renderPDFDocument(arrayBuffer) {
+  const before = document.getElementById('beforePanel');
+  const after = document.getElementById('afterPanel');
+
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 1.2 });
+
+  // Render original
+  const canvasBefore = document.createElement('canvas');
+  canvasBefore.width = viewport.width;
+  canvasBefore.height = viewport.height;
+  await page.render({ canvasContext: canvasBefore.getContext('2d'), viewport }).promise;
+  canvasBefore.style.maxWidth = '100%';
+  before.innerHTML = '';
+  before.appendChild(canvasBefore);
+
+  // Render redacted
+  const canvasAfter = document.createElement('canvas');
+  canvasAfter.width = viewport.width;
+  canvasAfter.height = viewport.height;
+  const ctxAfter = canvasAfter.getContext('2d');
+  await page.render({ canvasContext: ctxAfter, viewport }).promise;
+
+  redactCanvas(ctxAfter, canvasAfter.width, canvasAfter.height, state.level);
+  addStampToCanvas(ctxAfter, canvasAfter.width, canvasAfter.height, state.stamp);
+
+  canvasAfter.style.maxWidth = '100%';
+  after.innerHTML = '';
+  after.appendChild(canvasAfter);
+
+  state.exportCanvas = canvasAfter;
+}
+
+// ─── CANVAS REDACTION ENGINE ──────────────────────────
+function redactCanvas(ctx, w, h, level) {
+  const probs = { mild: 0.28, standard: 0.60, maximum: 0.88 };
+  const p = probs[level];
+  const lineH = Math.max(14, Math.floor(h / 40));
+
+  ctx.fillStyle = '#0a0a0a';
+
+  for (let y = 10; y < h - 10; y += lineH + 3) {
+    if (Math.random() < p) {
+      const barW = w * (0.35 + Math.random() * 0.6);
+      const barX = Math.random() * (w - barW);
+      ctx.fillRect(barX, y + 1, barW, lineH - 2);
+    }
+  }
+
+  // [REDACTED] labels
+  ctx.fillStyle = '#0a0a0a';
+  ctx.font = `bold ${Math.floor(lineH * 0.7)}px monospace`;
+  ctx.fillStyle = '#f0ead6';
+  for (let y = 10; y < h - 10; y += lineH + 3) {
+    if (Math.random() < 0.08) {
+      ctx.fillText('[REDACTED]', w * 0.1 + Math.random() * w * 0.3, y + lineH * 0.8);
+    }
+  }
+}
+
+function addStampToCanvas(ctx, w, h, stamp) {
+  const stamps = {
+    classified: { text: 'CLASSIFIED', color: '#c0140a' },
+    topsecret:  { text: 'TOP SECRET', color: '#c0140a' },
+    eyesonly:   { text: 'EYES ONLY', color: '#1a4a1a' },
+    fbi:        { text: 'F.B.I.', color: '#000080' }
+  };
+
+  const s = stamps[stamp] || stamps.classified;
+  const fontSize = Math.floor(w / 7);
+
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-0.4);
+
+  ctx.font = `bold ${fontSize}px 'Bebas Neue', Impact, sans-serif`;
+  ctx.strokeStyle = s.color;
+  ctx.lineWidth = Math.max(3, fontSize / 12);
+  ctx.globalAlpha = 0.22;
+  ctx.strokeText(s.text, -ctx.measureText(s.text).width / 2, fontSize / 3);
+
+  ctx.restore();
+}
+
+// ─── EXPORT DOC ───────────────────────────────────────
+function buildExportDoc(originalLines, redactedLines) {
+  const stampLabels = {
+    classified: 'CLASSIFIED',
+    topsecret: 'TOP SECRET',
+    eyesonly: 'EYES ONLY',
+    fbi: 'FBI SENSITIVE'
+  };
+
+  const label = stampLabels[state.stamp] || 'CLASSIFIED';
+  document.getElementById('docStampLabel').textContent = label;
+  document.getElementById('watermarkText').textContent = label;
+  document.getElementById('docDate').textContent = `DATE: ${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}).toUpperCase()}`;
+
+  const bodyHtml = redactedLines.map((line, i) => {
+    return `<div style="margin-bottom:4px;">${line}</div>`;
+  }).join('');
+
+  document.getElementById('docBody').innerHTML = bodyHtml;
+  document.getElementById('centerStamp').innerHTML = getStampHTML(state.stamp, 0.22);
+}
+
+function getStampHTML(stamp, opacity) {
+  const stamps = {
+    classified: `<div class="stamp-classified" style="opacity:${opacity}">CLASSIFIED</div>`,
+    topsecret:  `<div class="stamp-top-secret" style="opacity:${opacity}">TOP SECRET</div>`,
+    eyesonly:   `<div class="stamp-eyes-only" style="opacity:${opacity}">EYES ONLY</div>`,
+    fbi:        `<div class="stamp-fbi" style="opacity:${opacity}">F.B.I.</div>`
+  };
+  return stamps[stamp] || stamps.classified;
+}
+
+// ─── DOWNLOAD ─────────────────────────────────────────
+document.getElementById('downloadBtn').addEventListener('click', async () => {
+  showLoading(true);
+
+  if (state.exportCanvas) {
+    // Download canvas as PNG
+    state.exportCanvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CLASSIFIED-${state.fileName.replace(/\.[^.]+$/, '')}-epstify.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showLoading(false);
+    }, 'image/png');
+  } else {
+    // For text: capture the export doc div
+    const docEl = document.getElementById('docWrapper');
+    docEl.style.display = 'block';
+    await sleep(100);
+
+    html2canvas(docEl, {
+      scale: 2,
+      backgroundColor: '#f0ead6',
+      useCORS: true
+    }).then(canvas => {
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `CLASSIFIED-${state.fileName.replace(/\.[^.]+$/, '')}-epstify.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        docEl.style.display = 'none';
+        showLoading(false);
+      }, 'image/png');
+    });
+  }
+});
+
+// ─── SHARE ON X ───────────────────────────────────────
+document.getElementById('shareBtn').addEventListener('click', () => {
+  const msgs = [
+    `just epstified my "${state.fileName}" 🔲\n\nturns out i know too much\n\nepstify.lol`,
+    `my "${state.fileName}" has been officially classified by the Epstein Bureau 🔲\n\nsome things are better left ████████\n\nepstify.lol`,
+    `the Bureau has epstified my ${state.fileName} 🔲\n\ndeclassified: never\n\nepstify.lol`,
+    `🔲 CLASSIFIED\n\njust redactified "${state.fileName}"\n\nepstify.lol — Turn any doc into an Epstein File`,
+  ];
+  const msg = msgs[Math.floor(Math.random() * msgs.length)];
+  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+});
+
+// ─── NEW DOCUMENT ─────────────────────────────────────
+document.getElementById('newDocBtn').addEventListener('click', () => {
+  state.fileType = null;
+  state.fileData = null;
+  state.fileName = '';
+  state.textContent = '';
+  state.exportCanvas = null;
+  textInput.value = '';
+  fileInput.value = '';
+  dropZone.querySelector('.drop-title').textContent = 'DROP FILE TO CLASSIFY';
+  dropZone.querySelector('.drop-sub').textContent = 'click to browse or drag & drop';
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('easterEgg').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ─── UTILS ───────────────────────────────────────────
+function showLoading(show) {
+  document.getElementById('loadingOverlay').classList.toggle('active', show);
+}
+
+function sleep(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
