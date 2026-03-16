@@ -64,3 +64,10 @@ Not affiliated with any government agency or individual.
 ---
 
 *Classified by order of ████████ | Declassified: Never | epstify.com*
+
+---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=pietrorenzii/epstify&type=Date)](https://star-history.com/#pietrorenzii/epstify&Date)
+
