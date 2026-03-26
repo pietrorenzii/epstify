@@ -423,10 +423,10 @@ document.getElementById('downloadBtn').addEventListener('click', async () => {
 // ─── SHARE ON X ───────────────────────────────────────
 document.getElementById('shareBtn').addEventListener('click', () => {
   const msgs = [
-    `just epstified my "${state.fileName}" 🔲\n\nturns out i know too much\n\nepstify.lol`,
-    `my "${state.fileName}" has been officially classified by the Epstein Bureau 🔲\n\nsome things are better left ████████\n\nepstify.lol`,
-    `the Bureau has epstified my ${state.fileName} 🔲\n\ndeclassified: never\n\nepstify.lol`,
-    `🔲 CLASSIFIED\n\njust redactified "${state.fileName}"\n\nepstify.lol — Turn any doc into an Epstein File`,
+    `just epstified my "${state.fileName}" 🔲\n\nturns out i know too much\n\nepstify.com`,
+    `my "${state.fileName}" has been officially classified by the Epstein Bureau 🔲\n\nsome things are better left ████████\n\nepstify.com`,
+    `the Bureau has epstified my ${state.fileName} 🔲\n\ndeclassified: never\n\nepstify.com`,
+    `🔲 CLASSIFIED\n\njust redactified "${state.fileName}"\n\nepstify.com — Turn any doc into an Epstein File`,
   ];
   const msg = msgs[Math.floor(Math.random() * msgs.length)];
   const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(msg)}`;
